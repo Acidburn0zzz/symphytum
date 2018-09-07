@@ -1,0 +1,18 @@
+{
+  "app-id": "io.github.Symphytum",
+  "branch": "stable",
+  "runtime": "org.kde.Platform",
+  "sdk": "org.kde.Sdk",
+  "runtime-version": "5.11",
+  "command": "symphytum",
+  "finish-args": [
+    "--socket=wayland",
+    "--socket=x11",
+    "--device=dri",
+    "--share=ipc",
+    "--share=network",
+    /* For QtSingleApplication */
+    "--env=TMPDIR=/var/tmp",
+    "--filesystem=host", /* test if needed to import/export files, test drag drop img field type */
+  ],
+}

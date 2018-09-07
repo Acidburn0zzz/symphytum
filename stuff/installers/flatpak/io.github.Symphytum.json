@@ -21,23 +21,20 @@
     "name": "symphytum",
     "buildsystem": "simple",
       "build-commands": [
+        "tar xvzf symphytum*.tar.gz",
         "qmake -config release",
         "make"
       ],
     "sources": [
       {
-        "type": "archive",
+        "type": "file",
         "url": "https://github.com/giowck/symphytum/releases/download/v2.3/symphytum-2.3-src.tar.gz",
         "sha256": "11761e83d780ec903f9c5b1f5dd0235036d09d21e8e57fd78704e9f39ca69e12"
-      }
-    ],
-    "sources": [
+      },
       {
         "type": "file",
         "path": "io.github.Symphytum.png"
-      }
-    ],
-    "sources": [
+      },
       {
         "type": "file",
         "path": "io.github.Symphytum.desktop"

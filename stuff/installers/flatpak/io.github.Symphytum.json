@@ -13,7 +13,6 @@
     "--share=network",
     /* For QtSingleApplication */
     "--env=TMPDIR=/var/tmp",
-    /* test if needed to import export files test drag drop img field type */
     "--filesystem=host"
   ],
   "modules": [
@@ -23,7 +22,8 @@
       "build-commands": [
         "tar xvzf symphytum*.tar.gz",
         "qmake -config release",
-        "make"
+        "make",
+        "install -D symphytum /app/bin/symphytum"
       ],
     "sources": [
       {

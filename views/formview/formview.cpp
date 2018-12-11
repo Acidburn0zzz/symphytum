@@ -55,8 +55,7 @@ FormView::FormView(QWidget *parent) :
     m_isAnimating(false), m_isMovingFW(false), m_dropRectWidget(0),
     m_isSelectedFW(false), m_selectRectWidget(0), m_horizontalResizeGrip(0),
     m_verticalResizeGrip(0), m_isResizingFW(false), m_currentRow(-1),
-    m_currentColumn(-1), m_emptyFormWidget(0), m_modifiedTrigger(false),
-    m_layoutIsLocked(false)
+    m_currentColumn(-1), m_emptyFormWidget(0), m_modifiedTrigger(false)
 {
     initFormView();
     createContextActions();
@@ -296,15 +295,6 @@ void FormView::updateLastModified(int startRow, int endRow)
 
 }
 
-void FormView::setLockFormLayout(const bool locked)
-{
-    m_layoutIsLocked = locked;
-    if (locked) {
-        //remove selection if any
-        clearFormWidgetSelection();
-    }
-}
-
 
 //-----------------------------------------------------------------------------
 // Protected slots
@@ -481,7 +471,7 @@ void FormView::resizeEvent(QResizeEvent *event)
 
 void FormView::mousePressEvent(QMouseEvent *event)
 {
-    if (SyncSession::IS_READ_ONLY || m_layoutIsLocked)
+    if (SyncSession::IS_READ_ONLY)
         return;
 
     //set start drag pos for a possible drag operation
@@ -535,7 +525,7 @@ void FormView::mousePressEvent(QMouseEvent *event)
 }
 void FormView::mouseMoveEvent(QMouseEvent *event)
 {
-    if(SyncSession::IS_READ_ONLY || m_layoutIsLocked) {
+    if(SyncSession::IS_READ_ONLY) {
         return QAbstractItemView::mouseMoveEvent(event);
     }
 
@@ -1642,35 +1632,16 @@ void FormView::setupViewFonts()
     SettingsManager sm;
     QString fontSizeString = sm.restoreProperty("fontSize", "formView").toString();
     int fontSizeIndex = sm.restoreProperty("fontSizeIndex", "formView").toInt();
-    QString fontFamily = sm.restoreProperty("fontFamily", "formView").toString();
-    static QString defaultSystemFont = QApplication::font().family();
-    QString styleSheet;
 
-    //font size
     if (fontSizeIndex == 0) { //auto mode
 #ifdef Q_OS_WIN
-        styleSheet.append("font-size: 13px;"); //make font bigger only on windows
+        setStyleSheet("font-size: 13px;"); //make font bigger only on windows
 #else
-        styleSheet.clear(); //clear, use system's default on other systems
+        setStyleSheet(""); //clear, use system's default on other systems
 #endif
     } else if (fontSizeIndex == 1) { //system
-        styleSheet.clear(); //clear, use system's default
+        setStyleSheet(""); //clear, use system's default
     } else {
-        styleSheet.append(QString("font-size: %1;").arg(fontSizeString));
+        setStyleSheet(QString("font-size: %1;").arg(fontSizeString));
     }
-
-    //font style
-    if (fontFamily.isEmpty() || (fontFamily == "Default")) {
-        //use default
-#ifdef Q_OS_WIN
-        //but on windows use different default font to make it better
-        styleSheet.append(" font-family: Segoe UI;");
-#else
-        styleSheet.append(QString(" font-family: %1;").arg(defaultSystemFont));
-#endif
-    } else {
-        styleSheet.append(QString(" font-family: %1;").arg(fontFamily));
-    }
-
-    setStyleSheet(styleSheet);
 }

@@ -178,13 +178,11 @@ void ImageFormWidget::setData(const QVariant &data)
         int fileId = data.toInt();
         QString fileName;
         QString hashName;
-        QString origDirPath;
         QDateTime createdDateTime;
         MetadataEngine::getInstance().getContentFile(fileId,
                                                      fileName,
                                                      hashName,
-                                                     createdDateTime,
-                                                     origDirPath);
+                                                     createdDateTime);
         FileManager fm(this);
         QString filePath = fm.getFilesDirectory() + hashName;
 
@@ -295,13 +293,12 @@ void ImageFormWidget::mouseMoveEvent(QMouseEvent *event)
     }
 
     //get file
-    QString fileName, hashName, origDirPath;
+    QString fileName, hashName;
     QDateTime dateAdded;
     MetadataEngine::getInstance().getContentFile(m_currentFileId,
                                                  fileName,
                                                  hashName,
-                                                 dateAdded,
-                                                 origDirPath);
+                                                 dateAdded);
     FileManager fm(this);
     QString filePath = fm.getFilesDirectory() + hashName;
 
@@ -445,13 +442,12 @@ void ImageFormWidget::saveAsActionTriggered()
     MetadataEngine *meta = &MetadataEngine::getInstance();
 
     //get file
-    QString fileName, hashName, origDirPath;
+    QString fileName, hashName;
     QDateTime dateAdded;
     meta->getContentFile(m_currentFileId,
                          fileName,
                          hashName,
-                         dateAdded,
-                         origDirPath);
+                         dateAdded);
 
     QString defaultOutputName = QDir::homePath() + "/" + fileName;
     QString outputFile = QFileDialog::getSaveFileName(this,
@@ -492,13 +488,12 @@ void ImageFormWidget::deleteActionTriggered()
             &pd, SLOT(close()));
 
     //remove file
-    QString fileName, hashName, origDirPath;
+    QString fileName, hashName;
     QDateTime dateAdded;
     meta->getContentFile(m_currentFileId,
                          fileName,
                          hashName,
-                         dateAdded,
-                         origDirPath);
+                         dateAdded);
     fm.startRemoveFile(hashName);
 
     //wait until file has been copied
@@ -518,13 +513,12 @@ void ImageFormWidget::deleteActionTriggered()
 
 void ImageFormWidget::openActionTriggered()
 {
-    QString fileName, hashName, origDirPath;
+    QString fileName, hashName;
     QDateTime dateAdded;
     MetadataEngine::getInstance().getContentFile(m_currentFileId,
                                                  fileName,
                                                  hashName,
-                                                 dateAdded,
-                                                 origDirPath);
+                                                 dateAdded);
     FileManager fm(this);
     fm.openContentFile(hashName);
 }
@@ -588,13 +582,12 @@ void ImageFormWidget::importImage(const QString &file)
 
     //remove exiting file
     if (m_currentFileId) {
-        QString fileName, hashName, origDirPath;
+        QString fileName, hashName;
         QDateTime dateAdded;
         meta->getContentFile(m_currentFileId,
                              fileName,
                              hashName,
-                             dateAdded,
-                             origDirPath);
+                             dateAdded);
 
         //if user dragged the image from and to the image label (same image)
         if (file.contains(hashName)) return;

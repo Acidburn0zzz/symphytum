@@ -34,8 +34,7 @@ class StandardModel : public QSqlTableModel
     Q_OBJECT
 
 public:
-    explicit StandardModel(MetadataEngine *meta, QObject *parent = nullptr);
-    ~StandardModel();
+    explicit StandardModel(MetadataEngine *meta, QObject *parent = 0);
 
     /**
      * Reimplemented headerData because the column names are queried from metadata
@@ -56,7 +55,7 @@ public:
     /** Duplicate the specified row */
     void duplicateRecord(int row);
 
-    /** Reimplemented to notify views that rows have been deleted (after deletion) */
+    /** Reimplemented to notify views that rows have been deleted (after deketion) */
     bool removeRows(int row, int count, const QModelIndex &parent);
 
     /**

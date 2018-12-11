@@ -84,7 +84,7 @@ private:
     int getDatabaseVersion();
 
     /** Upgrade the database to the new version */
-    bool upgradeDatabase(const int oldVersion);
+    void upgradeDatabase(const int oldVersion, const int newVersion);
 
     static DatabaseManager *m_instance;
     QString m_databasePath; /**< The full path, including db name

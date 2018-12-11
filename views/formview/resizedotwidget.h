@@ -33,7 +33,7 @@ class ResizeDotWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit ResizeDotWidget(QWidget *parent = nullptr);
+    explicit ResizeDotWidget(QWidget *parent = 0);
     bool isResizing; /**< A boolean indicating if the grip is
                           currently in a drag resize operation */
 

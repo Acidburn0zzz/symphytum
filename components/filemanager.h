@@ -35,7 +35,7 @@ public:
         CopyOp,
         RemoveOp
     };
-    FileTask(const QString &filesDir, QObject *parent = nullptr);
+    FileTask(const QString &filesDir, QObject *parent = 0);
     ~FileTask();
     void configureTask(const QString &srcfileName,
                        const QString &destFileName = QString(),
@@ -67,7 +67,7 @@ class FileManager : public QObject
     Q_OBJECT
 
 public:
-    explicit FileManager(QObject *parent = nullptr);
+    explicit FileManager(QObject *parent = 0);
     ~FileManager();
     
     /** Whether local files were added/removed and need to be synced */

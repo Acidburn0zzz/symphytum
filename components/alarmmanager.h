@@ -44,7 +44,7 @@ public:
         QDateTime alarmDateTime;
     } Alarm;
 
-    explicit AlarmManager(QObject *parent = nullptr);
+    explicit AlarmManager(QObject *parent = 0);
 
     /**
      * @brief Insert or update (if already registered)

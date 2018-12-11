@@ -36,7 +36,7 @@ class SyncStatusWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit SyncStatusWidget(QWidget *parent = nullptr);
+    explicit SyncStatusWidget(QWidget *parent = 0);
     ~SyncStatusWidget();
 
 public slots:

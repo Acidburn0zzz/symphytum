@@ -45,7 +45,7 @@ class AddFieldDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit AddFieldDialog(QWidget *parent = nullptr);
+    explicit AddFieldDialog(QWidget *parent = 0);
     ~AddFieldDialog();
 
     /**

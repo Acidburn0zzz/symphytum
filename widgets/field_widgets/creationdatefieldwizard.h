@@ -35,7 +35,7 @@ class CreationDateFieldWizard : public AbstractFieldWizard
 
 public:
     explicit CreationDateFieldWizard(const QString &fieldName,
-                                 QWidget *parent = nullptr,
+                                 QWidget *parent = 0,
                                  AbstractFieldWizard::EditMode editMode
                                  = AbstractFieldWizard::NewEditMode);
     ~CreationDateFieldWizard();

@@ -105,8 +105,7 @@ SOURCES += main.cpp\
     widgets/field_widgets/urlfieldwizard.cpp \
     widgets/field_widgets/emailfieldwizard.cpp \
     widgets/form_widgets/emailformwidget.cpp \
-    components/sync_framework/megasyncdriver.cpp \
-    widgets/upgradesuccessdialog.cpp
+    components/sync_framework/megasyncdriver.cpp
 
 HEADERS  += widgets/mainwindow.h \
     utils/definitionholder.h \
@@ -188,8 +187,7 @@ HEADERS  += widgets/mainwindow.h \
     widgets/field_widgets/urlfieldwizard.h \
     widgets/field_widgets/emailfieldwizard.h \
     widgets/form_widgets/emailformwidget.h \
-    components/sync_framework/megasyncdriver.h \
-    widgets/upgradesuccessdialog.h
+    components/sync_framework/megasyncdriver.h
 
 RESOURCES += \
     resources/resources.qrc
@@ -217,8 +215,7 @@ FORMS += \
     ui/importdialog.ui \
     ui/aboutdialog.ui \
     ui/urlfieldwizard.ui \
-    ui/emailfieldwizard.ui \
-    widgets/upgradesuccessdialog.ui
+    ui/emailfieldwizard.ui
 
 TRANSLATIONS = stuff/translations/symphytum_de.ts \
     stuff/translations/symphytum_it.ts \

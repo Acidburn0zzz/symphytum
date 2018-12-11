@@ -35,7 +35,7 @@ class EmailFieldWizard : public AbstractFieldWizard
 
 public:
     explicit EmailFieldWizard(const QString &fieldName,
-                             QWidget *parent = nullptr,
+                             QWidget *parent = 0,
                              AbstractFieldWizard::EditMode editMode
                              = AbstractFieldWizard::NewEditMode);
     ~EmailFieldWizard();

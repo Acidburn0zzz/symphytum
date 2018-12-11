@@ -250,7 +250,7 @@ private:
 class DeleteRecordCommand : public QUndoCommand
 {
 public:
-    DeleteRecordCommand(int row, QUndoCommand *parent = nullptr);
+    DeleteRecordCommand(int row, QUndoCommand *parent = 0);
     ~DeleteRecordCommand();
 
     void undo();
@@ -276,7 +276,7 @@ private:
 class DuplicateRecordCommand : public QUndoCommand
 {
 public:
-    DuplicateRecordCommand(int row, QUndoCommand *parent = nullptr);
+    DuplicateRecordCommand(int row, QUndoCommand *parent = 0);
     ~DuplicateRecordCommand();
 
     void undo();

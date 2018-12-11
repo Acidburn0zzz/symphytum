@@ -35,7 +35,7 @@ class ModDateFieldWizard : public AbstractFieldWizard
 
 public:
     explicit ModDateFieldWizard(const QString &fieldName,
-                                 QWidget *parent = nullptr,
+                                 QWidget *parent = 0,
                                  AbstractFieldWizard::EditMode editMode
                                  = AbstractFieldWizard::NewEditMode);
     ~ModDateFieldWizard();

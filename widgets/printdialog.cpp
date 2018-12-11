@@ -453,15 +453,13 @@ QString PrintDialog::imageTypeItemHtml(const QVariant &data, int fieldId)
         QString filePath;
         QString fileName;
         QString fileHash;
-        QString origDirPath;
         QDateTime addedDateTime;
         FileManager fm;
 
         m_metadataEngine->getContentFile(fileId,
                                          fileName,
                                          fileHash,
-                                         addedDateTime,
-                                         origDirPath);
+                                         addedDateTime);
 
         filePath = fm.getFilesDirectory() + fileHash;
 

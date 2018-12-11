@@ -44,7 +44,7 @@ public:
     };
 
     explicit AbstractFieldWizard(const QString &fieldName,
-                                 QWidget *parent = nullptr,
+                                 QWidget *parent = 0,
                                  EditMode editMode = NewEditMode);
     virtual ~AbstractFieldWizard();
 

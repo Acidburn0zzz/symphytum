@@ -34,7 +34,7 @@ class CheckboxFormWidget : public AbstractFormWidget
     Q_OBJECT
 
 public:
-    CheckboxFormWidget(QWidget *parent = nullptr);
+    CheckboxFormWidget(QWidget *parent = 0);
 
     void setFieldName(const QString &name);
     QString getFieldName() const;

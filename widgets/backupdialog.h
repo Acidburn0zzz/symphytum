@@ -36,7 +36,7 @@ class BackupDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit BackupDialog(QWidget *parent = nullptr);
+    explicit BackupDialog(QWidget *parent = 0);
     ~BackupDialog();
 
     /** Whether a backup file has been restored */

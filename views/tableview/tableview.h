@@ -34,7 +34,7 @@ class TableView : public QTableView
     Q_OBJECT
 
 public:
-    explicit TableView(QWidget *parent = nullptr);
+    explicit TableView(QWidget *parent = 0);
 
     /** Reimplemented to call custom view init methods after setting model */
     void setModel(QAbstractItemModel *model);

@@ -34,7 +34,7 @@ class ComboboxFormWidget : public AbstractFormWidget
     Q_OBJECT
 
 public:
-    ComboboxFormWidget(QWidget *parent = nullptr);
+    ComboboxFormWidget(QWidget *parent = 0);
 
     void setFieldName(const QString &name);
     QString getFieldName() const;

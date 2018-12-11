@@ -358,7 +358,7 @@ void AddFieldDialog::deleteCurrentWizard()
 {
     if (m_currentWizard) {
         delete m_currentWizard;
-        m_currentWizard = nullptr;
+        m_currentWizard = 0;
     }
 }
 

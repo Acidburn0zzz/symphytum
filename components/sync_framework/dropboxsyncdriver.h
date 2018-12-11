@@ -33,7 +33,7 @@ class DropboxSyncDriver : public AbstractSyncDriver
     Q_OBJECT
 
 public:
-    explicit DropboxSyncDriver(QObject *parent = nullptr);
+    explicit DropboxSyncDriver(QObject *parent = 0);
     ~DropboxSyncDriver();
 
     void startAuthenticationRequest(const QStringList &args);

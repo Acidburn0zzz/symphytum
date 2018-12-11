@@ -41,9 +41,5 @@
         <file>images/icons/megasync.png</file>
         <file>languages/qt_it.qm</file>
         <file>languages/qt_fr.qm</file>
-        <file>images/icons/locked.png</file>
-        <file>images/icons/unlocked.png</file>
-        <file>images/icons/down.png</file>
-        <file>images/icons/up.png</file>
     </qresource>
 </RCC>

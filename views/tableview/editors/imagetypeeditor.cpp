@@ -55,13 +55,12 @@ ImageTypeEditor::ImageTypeEditor(QWidget *parent) :
 void ImageTypeEditor::setImage(int fileId)
 {
     FileManager fm(this);
-    QString fileName, hashName, origDirPath;
+    QString fileName, hashName;
     QDateTime dateAdded;
     MetadataEngine::getInstance().getContentFile(fileId,
                                                  fileName,
                                                  hashName,
-                                                 dateAdded,
-                                                 origDirPath);
+                                                 dateAdded);
 
     m_browseButton->setIcon(QPixmap(fm.getFilesDirectory() + hashName));
     m_currentFileId = fileId;
@@ -124,13 +123,12 @@ void ImageTypeEditor::browseButtonClicked()
 
     //remove exiting file
     if (m_currentFileId) {
-        QString fileName, hashName, origDirPath;
+        QString fileName, hashName;
         QDateTime dateAdded;
         meta->getContentFile(m_currentFileId,
                              fileName,
                              hashName,
-                             dateAdded,
-                             origDirPath);
+                             dateAdded);
 
         //if user dragged the image from and to the image label (same image)
         if (file.contains(hashName)) return;

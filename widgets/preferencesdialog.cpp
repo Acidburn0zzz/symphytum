@@ -22,7 +22,6 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QFontComboBox>
 
 
 //-----------------------------------------------------------------------------
@@ -32,7 +31,7 @@
 PreferencesDialog::PreferencesDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::PreferencesDialog),
-    m_settingsManager(nullptr),
+    m_settingsManager(0),
     m_cloudChanged(false),
     m_softwareReset(false),
     m_appearanceChanged(false),
@@ -67,8 +66,8 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
             this, SLOT(formViewColorComboChanged()));
     connect(ui->formViewFontSizeComboBox, SIGNAL(activated(int)),
             this, SLOT(formViewFontSizeComboChanged()));
-    connect(ui->formViewFontCombo, &QFontComboBox::currentTextChanged,
-            this, &PreferencesDialog::formViewFontComboChanged);
+    connect(ui->darkToolbarAmbianceCheckBox, SIGNAL(clicked()),
+            this, SLOT(darkToolbarAmbianceCheckChanged()));
     connect(ui->tableRowSizeSpinBox, SIGNAL(editingFinished()),
             this, SLOT(tableViewRowSizeSpinChanged()));
     connect(ui->cacheImagesTableViewCheckBox, SIGNAL(stateChanged(int)),
@@ -82,6 +81,13 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
         //disable updates
         ui->updateGroupBox->setEnabled(false);
     }
+
+#ifndef Q_OS_LINUX
+    //if not running linux, hide dark toolbar (ambiance) option
+    //NOTE: if more option are added to the main window group box
+    //      update this, else valid option are hidden
+    ui->mainWindowGroupBox->setVisible(false);
+#endif //Q_OS_LINUX
 }
 
 PreferencesDialog::~PreferencesDialog()
@@ -194,16 +200,6 @@ void PreferencesDialog::formViewColorComboChanged()
     m_settingsManager->saveProperty("backgroundColorIndex", "formView", colorIndex);
 
     m_appearanceChanged = true;
-
-#ifdef Q_OS_WIN
-    static bool messageShown = false;
-    if (!messageShown) { //show only once until restart
-        QMessageBox::information(this, tr("Restart Required"),
-                                 tr("Please restart %1 to apply the new background color")
-                                 .arg(DefinitionHolder::NAME));
-        messageShown = true;
-    }
-#endif
 }
 
 void PreferencesDialog::formViewFontSizeComboChanged()
@@ -217,10 +213,11 @@ void PreferencesDialog::formViewFontSizeComboChanged()
     m_appearanceChanged = true;
 }
 
-void PreferencesDialog::formViewFontComboChanged()
+void PreferencesDialog::darkToolbarAmbianceCheckChanged()
 {
-    QString fontString = ui->formViewFontCombo->currentText();
-    m_settingsManager->saveProperty("fontFamily", "formView", fontString);
+    bool checked = ui->darkToolbarAmbianceCheckBox->isChecked();
+
+    m_settingsManager->saveProperty("linuxDarkAmbianceToolbar", "mainWindow", checked);
 
     m_appearanceChanged = true;
 }
@@ -311,8 +308,6 @@ void PreferencesDialog::initSettings()
                                         i.value());
         ++i;
     }
-
-    ui->formViewFontCombo->setCurrentText("Default");
 }
 
 void PreferencesDialog::loadSettings()
@@ -323,6 +318,7 @@ void PreferencesDialog::loadSettings()
         ui->cloudStatusComboBox->setCurrentIndex(1);
 
     //database path
+    //TODO: load path from setting or db manager?mhh
     QString dbPath = m_settingsManager->restoreCustomDatabaseDir();
     if (dbPath.isEmpty()) {
         dbPath = QFileInfo(DatabaseManager::getInstance()
@@ -340,13 +336,6 @@ void PreferencesDialog::loadSettings()
                 "fontSizeIndex", "formView").toInt();
     ui->formViewFontSizeComboBox->setCurrentIndex(fontSizeIndex);
 
-    //form view font family
-    QString fontFamily = m_settingsManager->restoreProperty(
-                "fontFamily", "formView").toString();
-    if (!fontFamily.isEmpty()) {
-        ui->formViewFontCombo->setCurrentText(fontFamily);
-    }
-
     //table view row size
     int tableRowSize =  m_settingsManager->restoreProperty(
                 "rowSize", "tableView").toInt();
@@ -358,6 +347,12 @@ void PreferencesDialog::loadSettings()
     bool cacheImg =  m_settingsManager->restoreProperty(
                 "cacheImages", "tableView").toBool();
     ui->cacheImagesTableViewCheckBox->setChecked(cacheImg);
+
+#ifdef Q_OS_LINUX
+    //dark toolbar ambiance style
+    if (m_settingsManager->restoreProperty("linuxDarkAmbianceToolbar", "mainWindow").toBool())
+        ui->darkToolbarAmbianceCheckBox->setChecked(true);
+#endif //Q_OS_LINUX
 }
 
 void PreferencesDialog::updateDatabasePath()

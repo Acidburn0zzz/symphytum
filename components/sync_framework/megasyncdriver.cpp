@@ -22,7 +22,7 @@
 
 MegaSyncDriver::MegaSyncDriver(QObject *parent) :
     AbstractSyncDriver(parent),
-    m_process(nullptr), m_currentRequest(NoRequest)
+    m_process(0), m_currentRequest(NoRequest)
 {
     initSecrets();
     m_megaFolderPath = DefinitionHolder::NAME + "/";
@@ -47,11 +47,10 @@ void MegaSyncDriver::startAuthenticationRequest(const QStringList &megaCredentia
 {
     m_currentRequest = AuthRequest;
 
-    //mega email. pass and 2FA code as args
-    if (megaCredentials.size() == 3) {
+    //mega email and pass as args
+    if (megaCredentials.size() == 2) {
         m_requestArgs.append(megaCredentials.at(0));
         m_requestArgs.append(megaCredentials.at(1));
-        m_requestArgs.append(megaCredentials.at(2));
     }
 
     startRequest();
@@ -170,8 +169,8 @@ void MegaSyncDriver::processFinished(int exitCode,
         case AuthRequest:
         {
 #ifdef Q_OS_WIN
-            if (!result.contains("[API:err:")) { //windows not using interactive cmd shell,
-                                                 //just login command, see startRequest()
+            if (!result.contains("[err:")) { //windows not using interactive cmd shell,
+                                             //just login command, see startRequest()
 #else
             if (result.contains("100.00 %")) {
 #endif
@@ -185,9 +184,8 @@ void MegaSyncDriver::processFinished(int exitCode,
                 error = true;
 
                 //clean errors a bit up
-                if (result.contains("invalid email or password") ||
-                        result.contains("incorrect authentication"))
-                    result = tr("Login failed: incorrect email or password\n");
+                if (result.contains("invalid email or password"))
+                    result = tr("Login failed: invalid email or password\n");
             }
         }
             break;
@@ -236,7 +234,7 @@ void MegaSyncDriver::processFinished(int exitCode,
             //file found?
             bool notFound = result.contains("Couldn't find");
 
-            if (!result.contains("[API:err:")) {
+            if (!result.contains("[err:")) {
                 if (!notFound) {
                     //since downloaded files are not overwritten
                     //rename temporary download file to original name
@@ -264,7 +262,7 @@ void MegaSyncDriver::processFinished(int exitCode,
             //megacmd says fail not found when really it should
             //say not logged in
             //see bug https://github.com/meganz/MEGAcmd/issues/19
-            if (!result.contains("[API:err:")) {
+            if (!result.contains("[err:")) {
                 //do next step
                 m_currentRequest = UploadRequestRmStep;
                 m_requestArgs = requestArgs;
@@ -282,7 +280,7 @@ void MegaSyncDriver::processFinished(int exitCode,
             break;
         case UploadRequestRmStep:
         {
-            if (!result.contains("[API:err:") || result.contains("No such file or directory")) {
+            if (!result.contains("[err:") || result.contains("No such file or directory")) {
                 //do next step
                 m_currentRequest = UploadRequestMvStep;
                 m_requestArgs = requestArgs;
@@ -300,7 +298,7 @@ void MegaSyncDriver::processFinished(int exitCode,
             dest.remove(m_megaFolderPath);
             dest.remove(".tmp");
 
-            if (!result.contains("[API:err:")) {
+            if (!result.contains("[err:")) {
                 emit uploadReady(src, dest);
             } else {
                 error = true;
@@ -321,7 +319,7 @@ void MegaSyncDriver::processFinished(int exitCode,
         {
             QString file = requestArgs.at(0);
             file.remove(m_megaFolderPath);
-            if (!result.contains("[API:err:") || result.contains("No such file or directory")) {
+            if (!result.contains("[err:") || result.contains("No such file or directory")) {
                 emit removeReady(file);
             } else {
                 error = true;
@@ -330,7 +328,7 @@ void MegaSyncDriver::processFinished(int exitCode,
             break;
         case RemoveTmpCloudFileRequest:
         {
-            if (!result.contains("[API:err:")) {
+            if (!result.contains("[err:")) {
                 //redo upload tmp request
                 m_currentRequest = UploadRequestTmpStep;
                 m_requestArgs = requestArgs;
@@ -498,30 +496,21 @@ void MegaSyncDriver::startRequest()
     m_processOutput.clear();
     m_process->start(megaCmdPath, args);
 
+#ifndef Q_OS_WIN //see above, mega-cmd shell doesn't work with QProcess on windows
+    //if login command, use interactive command to avoid pass leak
+    //instead of command line args
     if (m_currentRequest == AuthRequest) {
         QString megaEmail;
         QString megaPass;
-        QString mega2FACode;
-        if (m_requestArgs.size() >= 3) {
+        if (m_requestArgs.size() >= 2) {
             megaEmail = m_requestArgs.at(0);
             megaPass = m_requestArgs.at(1);
-            mega2FACode = m_requestArgs.at(2);
         }
-#ifndef Q_OS_WIN //see above, mega-cmd shell doesn't work with QProcess on windows
-        //if login command, use interactive command to avoid pass leak
-        //instead of command line args
         m_process->waitForReadyRead();
-        m_process->write("login " + megaEmail.toLatin1() + " " + megaPass.toLatin1() + "\n");
+        m_process->write("login " + megaEmail.toLatin1() + " " + megaPass.toLatin1());
         m_process->waitForBytesWritten();
-#endif
-
-        //input 2FA code if required
-        if (!mega2FACode.isEmpty()) {
-            m_process->waitForReadyRead();
-            m_process->write(mega2FACode.toLatin1() + "\n");
-            m_process->waitForBytesWritten();
-        }
     }
+#endif
 
     //close write channel to allow
     //ready output signals, see docs

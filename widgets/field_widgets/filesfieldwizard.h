@@ -35,7 +35,7 @@ class FilesFieldWizard : public AbstractFieldWizard
 
 public:
     explicit FilesFieldWizard(const QString &fieldName,
-                             QWidget *parent = nullptr,
+                             QWidget *parent = 0,
                              AbstractFieldWizard::EditMode editMode
                              = AbstractFieldWizard::NewEditMode);
     ~FilesFieldWizard();

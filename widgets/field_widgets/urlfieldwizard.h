@@ -35,7 +35,7 @@ class URLFieldWizard : public AbstractFieldWizard
 
 public:
     explicit URLFieldWizard(const QString &fieldName,
-                             QWidget *parent = nullptr,
+                             QWidget *parent = 0,
                              AbstractFieldWizard::EditMode editMode
                              = AbstractFieldWizard::NewEditMode);
     ~URLFieldWizard();

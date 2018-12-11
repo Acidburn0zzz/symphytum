@@ -59,13 +59,13 @@ public:
 
     /** Create the apropriate sync driver for the specified sync service */
     static AbstractSyncDriver* createSyncDriver(SyncService service,
-                                                QObject *parent = nullptr);
+                                                QObject *parent = 0);
 
     /**
      * Create and return a sync driver instance for
      * the current configured sync service
      */
-    AbstractSyncDriver* getCurrentSyncDriver(QObject *parent = nullptr);
+    AbstractSyncDriver* getCurrentSyncDriver(QObject *parent = 0);
 
     /**
      * This method starts a sync request to check if there are changes
@@ -225,8 +225,8 @@ private slots:
     void storageQuotaExceededSlot();
 
 private:
-    SyncEngine(QObject *parent = nullptr);
-    SyncEngine(const SyncEngine&) : QObject(nullptr) {}
+    SyncEngine(QObject *parent = 0);
+    SyncEngine(const SyncEngine&) : QObject(0) {}
     ~SyncEngine();
 
     /** Enum of special engine operations */

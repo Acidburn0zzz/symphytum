@@ -25,7 +25,6 @@ CollectionListModel::CollectionListModel(QObject *parent) :
     setEditStrategy(QSqlTableModel::OnFieldChange);
 
     setTable("collections");
-    setSort(4, Qt::AscendingOrder); //order by c_order
     select();
 }
 
@@ -53,11 +52,10 @@ bool CollectionListModel::setData(const QModelIndex &index,
     }
 }
 
-void CollectionListModel::addCollection(const int collectionOrder, const QString &name)
+void CollectionListModel::addCollection(const QString &name)
 {
     QSqlRecord r = record();
     r.setValue(1, name);
-    r.setValue(4, collectionOrder);
     insertRecord(-1, r);
 
     //changes are not applied even with on field change strategy

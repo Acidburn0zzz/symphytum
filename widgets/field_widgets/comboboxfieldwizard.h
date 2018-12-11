@@ -35,7 +35,7 @@ class ComboboxFieldWizard : public AbstractFieldWizard
 
 public:
     explicit ComboboxFieldWizard(const QString &fieldName,
-                                 QWidget *parent = nullptr,
+                                 QWidget *parent = 0,
                                  AbstractFieldWizard::EditMode editMode
                                  = AbstractFieldWizard::NewEditMode);
     ~ComboboxFieldWizard();

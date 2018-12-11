@@ -36,7 +36,7 @@ class PreferencesDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit PreferencesDialog(QWidget *parent = nullptr);
+    explicit PreferencesDialog(QWidget *parent = 0);
     ~PreferencesDialog();
 
     /** Return whether the cloud config has been edited */
@@ -59,7 +59,7 @@ private slots:
     void softwareResetButtonClicked();
     void formViewColorComboChanged();
     void formViewFontSizeComboChanged();
-    void formViewFontComboChanged();
+    void darkToolbarAmbianceCheckChanged();
     void tableViewRowSizeSpinChanged();
     void cacheImagesTableViewCheckBoxChanged();
     void browseDbPathButtonClicked();

@@ -33,7 +33,7 @@ class DropRectWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit DropRectWidget(QWidget *parent = nullptr);
+    explicit DropRectWidget(QWidget *parent = 0);
 
 private:
     QLabel *label;

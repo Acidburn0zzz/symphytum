@@ -36,7 +36,7 @@ class URLFormWidget : public AbstractFormWidget
     Q_OBJECT
 
 public:
-    explicit URLFormWidget(QWidget *parent = nullptr);
+    explicit URLFormWidget(QWidget *parent = 0);
 
     void setFieldName(const QString &name);
     QString getFieldName() const;

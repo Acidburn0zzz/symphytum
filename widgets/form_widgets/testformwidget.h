@@ -33,7 +33,7 @@ class TestFormWidget : public AbstractFormWidget
     Q_OBJECT
 
 public:
-    explicit TestFormWidget(QWidget *parent = nullptr);
+    explicit TestFormWidget(QWidget *parent = 0);
 
     void setFieldName(const QString &name);
     QString getFieldName() const;

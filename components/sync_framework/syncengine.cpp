@@ -25,7 +25,7 @@
 // Static init
 //-----------------------------------------------------------------------------
 
-SyncEngine* SyncEngine::m_instance = nullptr;
+SyncEngine* SyncEngine::m_instance = 0;
 
 
 //-----------------------------------------------------------------------------
@@ -43,13 +43,13 @@ void SyncEngine::destroy()
 {
     if (m_instance)
         delete m_instance;
-    m_instance = nullptr;
+    m_instance = 0;
 }
 
 AbstractSyncDriver* SyncEngine::createSyncDriver(SyncService service,
                                                  QObject *parent)
 {
-    AbstractSyncDriver *driver = nullptr;
+    AbstractSyncDriver *driver = 0;
 
     switch (service) {
     case SyncEngine::DropboxSync:

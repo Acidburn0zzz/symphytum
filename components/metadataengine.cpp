@@ -26,9 +26,9 @@
 // Static init
 //-----------------------------------------------------------------------------
 
-MetadataEngine* MetadataEngine::m_instance = nullptr;
+MetadataEngine* MetadataEngine::m_instance = 0;
 int MetadataEngine::m_currentCollectionId = 0;
-QStringList* MetadataEngine::m_currentCollectionFieldNameList = nullptr;
+QStringList* MetadataEngine::m_currentCollectionFieldNameList = 0;
 
 
 //-----------------------------------------------------------------------------
@@ -375,7 +375,7 @@ void MetadataEngine::setFieldProperties(FieldProperty propertyType,
 QAbstractItemModel* MetadataEngine::createModel(CollectionType type,
                                                const int collectionId)
 {
-    QAbstractItemModel *model = nullptr;
+    QAbstractItemModel *model = 0;
 
     switch (type) {
     case StandardCollection:
@@ -516,14 +516,14 @@ int MetadataEngine::duplicateCollection(int collectionId, bool copyMetadataOnly)
 
     //copy content data
     if (!copyMetadataOnly) {
-        QProgressDialog *pd = new QProgressDialog(nullptr);
+        QProgressDialog *pd = new QProgressDialog(0);
         int progressSteps = 3;
         pd->setWindowModality(Qt::ApplicationModal);
         pd->setWindowTitle(tr("Progress"));
         pd->setLabelText(tr("Duplicating collection data... Please wait!"));
         pd->setRange(0, progressSteps);
         pd->setValue(progressSteps++);
-        pd->setCancelButton(nullptr);
+        pd->setCancelButton(0);
         pd->show();
         qApp->processEvents();
 
@@ -555,10 +555,10 @@ int MetadataEngine::duplicateCollection(int collectionId, bool copyMetadataOnly)
         foreach (QString f, fileIdsToCopyList) {
             pd->setValue(++progressSteps);
             qApp->processEvents();
-            QString filePath, fileHashName, fileName, origDirPath;
+            QString filePath, fileHashName, fileName;
             QDateTime date;
             int id = f.toInt();
-            bool s = getContentFile(id, fileName, fileHashName, date, origDirPath);
+            bool s = getContentFile(id, fileName, fileHashName, date);
             if (s) {
                 filePath = filesDirPath + fileHashName;
                 //add file and wait until copy task complete
@@ -584,12 +584,10 @@ int MetadataEngine::duplicateCollection(int collectionId, bool copyMetadataOnly)
                 }
 
                 //update duplicate file metadata (file name and date) to match original
-                query.prepare("UPDATE files SET name=:name, date_added=:date_added, "
-                              "original_dir_path=:original_dir_path WHERE name=:hashName");
+                query.prepare("UPDATE files SET name=:name, date_added=:date_added WHERE name=:hashName");
                 query.bindValue(":name", fileName);
                 query.bindValue(":date_added", date);
                 query.bindValue(":hashName", fileHashName);
-                query.bindValue(":original_dir_path", origDirPath);
                 query.exec();
             }
         }
@@ -904,8 +902,7 @@ void MetadataEngine::deleteField(const int fieldId, int collectionId)
 }
 
 int MetadataEngine::addContentFile(const QString &fileName,
-                                    const QString &hashName,
-                                   const QString &originalDirPath)
+                                    const QString &hashName)
 {
     QSqlDatabase db = DatabaseManager::getInstance().getDatabase();
     QSqlQuery query(db);
@@ -915,12 +912,11 @@ int MetadataEngine::addContentFile(const QString &fileName,
     db.transaction();
 
     //add file
-    query.prepare("INSERT INTO files (\"name\",\"hash_name\",\"date_added\",\"original_dir_path\")"
-                  " VALUES (:name, :hash_name, :date_added, :original_dir_path)");
+    query.prepare("INSERT INTO files (\"name\",\"hash_name\",\"date_added\")"
+                  " VALUES (:name, :hash_name, :date_added)");
     query.bindValue(":name", fileName);
     query.bindValue(":hash_name", hashName);
     query.bindValue(":date_added", QDateTime::currentDateTime());
-    query.bindValue(":original_dir_path", originalDirPath);
     query.exec();
 
     //get id
@@ -985,7 +981,7 @@ void MetadataEngine::updateContentFile(int fileId,
 
     //update file
     query.prepare("UPDATE files SET name=:fileName, hash_name=:hashName"
-                  ", date_added=:dateAdded WHERE _id=:id"); //origDirPath should not be changed, so leave it out
+                  ", date_added=:dateAdded WHERE _id=:id");
     query.bindValue(":name", fileName);
     query.bindValue(":hash_name", hashName);
     query.bindValue(":date_added", dateAdded);
@@ -999,13 +995,12 @@ void MetadataEngine::updateContentFile(int fileId,
 bool MetadataEngine::getContentFile(int fileId,
                                     QString &fileName,
                                     QString &hashName,
-                                    QDateTime &dateAdded,
-                                    QString &origDirPath)
+                                    QDateTime &dateAdded)
 {
     QSqlDatabase db = DatabaseManager::getInstance().getDatabase();
     QSqlQuery query(db);
 
-    query.prepare("SELECT name,hash_name,date_added,original_dir_path FROM "
+    query.prepare("SELECT name,hash_name,date_added FROM "
                   "files WHERE _id=:fileId");
     query.bindValue(":fileId", fileId);
     query.exec();
@@ -1014,7 +1009,6 @@ bool MetadataEngine::getContentFile(int fileId,
         fileName = query.value(0).toString();
         hashName = query.value(1).toString();
         dateAdded = query.value(2).toDateTime();
-        origDirPath = query.value(3).toString();
         return true;
     } else {
         return false;
@@ -1105,80 +1099,6 @@ QStringList MetadataEngine::getAllCollectionContentFiles(const int collectionId,
 void MetadataEngine::setDirtyCurrentColleectionId()
 {
     m_currentCollectionId = 0;
-}
-
-int MetadataEngine::getCollectionOrder(const int collectionId)
-{
-    int order = 0;
-
-    QSqlQuery query(DatabaseManager::getInstance().getDatabase());
-    QString sql = QString("SELECT c_order FROM collections WHERE _id='%1'")
-            .arg(collectionId);
-    query.exec(sql);
-
-    if (query.next())
-        order = query.value(0).toInt();
-
-    return order;
-}
-
-int MetadataEngine::moveCollectionListOrderOneStepUp(const int collectionId,
-                                                        const int currentOrder)
-{
-    if (currentOrder <= 1) return 0;
-    QSqlQuery query(DatabaseManager::getInstance().getDatabase());
-
-    //move every collection up below current one
-    QString sql = QString("UPDATE collections SET c_order=c_order+1 WHERE "
-                          "c_order=(SELECT c_order-1 FROM collections WHERE _id='%1')")
-            .arg(collectionId);
-    query.exec(sql);
-
-    //update current collection to new order
-    sql = QString("UPDATE collections SET c_order=c_order-1 WHERE _id='%1'")
-            .arg(collectionId);
-    query.exec(sql);
-
-    return currentOrder - 1;
-}
-
-int MetadataEngine::moveCollectionListOrderOneStepDown(const int collectionId,
-                                                       const int currentOrder)
-{
-    if (currentOrder < 1) return 0;
-    QSqlQuery query(DatabaseManager::getInstance().getDatabase());
-
-    //move every collection down below current one
-    QString sql = QString("UPDATE collections SET c_order=c_order-1 WHERE "
-                          "c_order=(SELECT c_order+1 FROM collections WHERE _id='%1')")
-            .arg(collectionId);
-    query.exec(sql);
-
-    //update current collection to new order
-    sql = QString("UPDATE collections SET c_order=c_order+1 WHERE _id='%1'")
-            .arg(collectionId);
-    query.exec(sql);
-
-    return currentOrder + 1;
-}
-
-int MetadataEngine::getMaxCollectionOrderCount()
-{
-    int maxOrder = 0;
-
-    QSqlQuery query(DatabaseManager::getInstance().getDatabase());
-    QString sql = QString("SELECT c_order FROM collections ORDER BY c_order DESC");
-    query.exec(sql);
-
-    if (query.next())
-        maxOrder = query.value(0).toInt();
-
-    return maxOrder;
-}
-
-int MetadataEngine::getNewCollectionOrderCount()
-{
-    return getMaxCollectionOrderCount() + 1;
 }
 
 

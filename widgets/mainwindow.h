@@ -50,7 +50,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = 0);
+    MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
     /**
@@ -86,6 +86,8 @@ protected:
 private slots:
     void aboutActionTriggered();
     void aboutQtActionTriggered();
+    void onlineDocActionTriggered();
+    void donateActionTriggered();
     void preferenceActionTriggered();
     void formViewModeTriggered();
     void tableViewModeTriggered();
@@ -112,6 +114,7 @@ private slots:
     void printActionTriggered();
     void exportActionTriggered();
     void importActionTriggered();
+    void lockFormViewActionToggled(const bool locked);
 
     /** Create and show alarm list dialog */
     void showAlarmListDialog();
@@ -135,6 +138,9 @@ private slots:
     void checkForUpdatesSlot();
     void noUpdateFoundSlot();
     void updateErrorSlot();
+
+    //model
+    void reattachModelToViewsSlot();
 
 private:
     void createActions();
@@ -161,6 +167,11 @@ private:
      */
     void detachModelFromViews();
 
+    /** Detach and attach model to views, convenience function
+     * @param collectionId - the collection id to attach
+     */
+    void reattachModelToViews(const int collectionId);
+
     /** Set model on collection list view */
     void attachCollectionModelView();
 
@@ -185,6 +196,9 @@ private:
     /** Check if there are any alarm triggers to show in the AlarmListDialog */
     void checkAlarmTriggers();
 
+    /** Check if 30 days of usage have passed from first start and suggest to donate */
+    void checkDonationSuggestion();
+
     QToolBar *m_toolBar;
     QDockWidget *m_dockContainerWidget;
     DockWidget *m_dockWidget;
@@ -203,6 +217,8 @@ private:
     QAction *m_quitAction;
     QAction *m_aboutAction;
     QAction *m_aboutQtAction;
+    QAction *m_onlineDocAction;
+    QAction *m_donateAction;
     QAction *m_newCollectionAction;
     QAction *m_duplicateCollectionAction;
     QAction *m_deleteCollectionAction;
@@ -228,6 +244,7 @@ private:
     QAction *m_printAction;
     QAction *m_exportAction;
     QAction *m_importAction;
+    QAction *m_lockFormViewAction;
 #ifdef Q_OS_OSX
     QAction *m_minimizeAction;
     QAction *m_closeWindowAction;

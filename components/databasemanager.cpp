@@ -28,13 +28,13 @@
 
 #define SQL_CREATE_TABLE_COLLECTIONS \
     "CREATE TABLE \"collections\" (\"_id\" INTEGER PRIMARY KEY, \"name\" TEXT," \
-    " \"type\" INTEGER, \"table_name\" TEXT)"
+    " \"type\" INTEGER, \"table_name\" TEXT, \"c_order\" INTEGER)"
 #define SQL_CREATE_TABLE_INFO \
     "CREATE TABLE \"symphytum_info\" (\"_id\" INTEGER PRIMARY KEY , \"key\"" \
     " TEXT, \"value\" TEXT)"
 #define SQL_CREATE_TABLE_FILES \
     "CREATE TABLE \"files\" (\"_id\" INTEGER PRIMARY KEY, \"name\" TEXT," \
-    " \"hash_name\" TEXT, \"date_added\" TEXT)"
+    " \"hash_name\" TEXT, \"date_added\" TEXT, \"original_dir_path\" TEXT)"
 
 #define SQL_CREATE_TABLE_ALARMS \
     "CREATE TABLE \"alarms\" (\"_id\" INTEGER PRIMARY KEY, \"collection_id\" INTEGER," \
@@ -45,7 +45,7 @@
 // Static init
 //-----------------------------------------------------------------------------
 
-DatabaseManager* DatabaseManager::m_instance = 0;
+DatabaseManager* DatabaseManager::m_instance = nullptr;
 
 //-----------------------------------------------------------------------------
 // Public
@@ -62,7 +62,7 @@ void DatabaseManager::destroy()
 {
     if (m_instance)
         delete m_instance;
-    m_instance = 0;
+    m_instance = nullptr;
 }
 
 QSqlDatabase DatabaseManager::getDatabase() const
@@ -169,7 +169,7 @@ void DatabaseManager::openDatabase()
 
     if (!open) {
         QString err = database.lastError().text();
-        QMessageBox::critical(0, QObject::tr("Database Error"),
+        QMessageBox::critical(nullptr, QObject::tr("Database Error"),
                               QObject::tr("Failed to open the database file: %1")
                               .arg(err));
         return;
@@ -184,9 +184,36 @@ void DatabaseManager::openDatabase()
     //upgrade if possible
     int version = getDatabaseVersion();
     if (version < DefinitionHolder::DATABASE_VERSION) {
-        upgradeDatabase(version, DefinitionHolder::DATABASE_VERSION);
+        //create backup in case the upgrade fails
+        if (!QFile::copy(m_databasePath, m_databasePath + ".backup")) {
+            QMessageBox::critical(nullptr, QObject::tr("Database Version Upgrade Failed"),
+                                  QObject::tr("Failed to create database backup!"));
+            closeDatabase();
+            return;
+        }
+
+        if (!upgradeDatabase(version)) {
+            QMessageBox::critical(nullptr, QObject::tr("Database Version Upgrade Failed"),
+                                  QObject::tr("Failed to upgrade the database file: db_version %1")
+                                  .arg(version));
+            closeDatabase();
+
+            //restore backup
+            if ((!QFile::remove(m_databasePath)) ||
+                    (!QFile::copy(m_databasePath + ".backup", m_databasePath))) {
+                QMessageBox::critical(nullptr, QObject::tr("Database Version Upgrade Failed"),
+                                      QObject::tr("Failed to restore database backup"));
+            } else {
+                QFile::remove(m_databasePath + ".backup");
+            }
+
+            return;
+        }
+
+        //remove backup
+        QFile::remove(m_databasePath + ".backup");
     } else if (version > DefinitionHolder::DATABASE_VERSION) {
-        QMessageBox::critical(0, QObject::tr("Database Version Incompatible"),
+        QMessageBox::critical(nullptr, QObject::tr("Database Version Incompatible"),
                               QObject::tr("Failed to open the database file: db_version %1. "
                                           " Please upgrade %2 to a newer version "
                                           "and then try again!")
@@ -235,8 +262,8 @@ void DatabaseManager::initDatabase(QSqlDatabase &database)
     query.exec();
 
     //init example data
-    query.exec("INSERT INTO \"collections\" (\"name\",\"type\",\"table_name\")"
-               " VALUES (\"Medicinal Plants\",1,\"cb92ee55f44577b584464c13f47fa3771\")");
+    query.exec("INSERT INTO \"collections\" (\"name\",\"type\",\"table_name\", \"c_order\")"
+               " VALUES (\"Medicinal Plants\",1,\"cb92ee55f44577b584464c13f47fa3771\", 1)");
     query.exec("CREATE TABLE \"cb92ee55f44577b584464c13f47fa3771\" (\"_id\" "
                "INTEGER PRIMARY KEY , \"1\" TEXT, \"2\" TEXT, \"3\" TEXT, \"4\" INTEGER,"
                " \"5\" INTEGER, \"6\" INTEGER)");
@@ -295,14 +322,14 @@ void DatabaseManager::initDatabase(QSqlDatabase &database)
     query.exec("INSERT INTO \"cb92ee55f44577b584464c13f47fa3771_metadata\" VALUES (\"41\",\"col6_trigger\",\"\")");
     query.exec("INSERT INTO \"cb92ee55f44577b584464c13f47fa3771_metadata\" VALUES (\"42\",\"col6_name\",\"Photo\")");
     query.exec("INSERT INTO \"cb92ee55f44577b584464c13f47fa3771_metadata\" VALUES (\"43\",\"col6_type\",\"9\")");
-    query.exec("INSERT INTO \"files\" VALUES (\"1\",\"symphytum.jpg\",\"25993661ea0bdede9699836f9ba0956b.jpg\",\"2012-12-01T16:00:00\")");
-    query.exec("INSERT INTO \"files\" VALUES (\"2\",\"calendula.jpg\",\"81f87c38d8fd4cff00f35847e454e753.jpg\",\"2012-12-01T16:00:00\")");
-    query.exec("INSERT INTO \"files\" VALUES (\"3\",\"coffea.jpg\",\"fd461a1f28d6682993422d65dafa2ddf.jpg\",\"2012-12-01T16:00:00\")");
+    query.exec("INSERT INTO \"files\" VALUES (\"1\",\"symphytum.jpg\",\"25993661ea0bdede9699836f9ba0956b.jpg\",\"2012-12-01T16:00:00\", \"\")");
+    query.exec("INSERT INTO \"files\" VALUES (\"2\",\"calendula.jpg\",\"81f87c38d8fd4cff00f35847e454e753.jpg\",\"2012-12-01T16:00:00\", \"\")");
+    query.exec("INSERT INTO \"files\" VALUES (\"3\",\"coffea.jpg\",\"fd461a1f28d6682993422d65dafa2ddf.jpg\",\"2012-12-01T16:00:00\", \"\")");
     query.exec("INSERT INTO \"symphytum_info\" (\"key\",\"value\") VALUES (\"current_collection\",\"1\")");
 
     if (!database.commit()) {
         QString err = query.lastError().text();
-        QMessageBox::critical(0, QObject::tr("Database Error"),
+        QMessageBox::critical(nullptr, QObject::tr("Database Error"),
                               QObject::tr("Failed to initialize "
                                           "the database: %1")
                               .arg(err));
@@ -346,21 +373,67 @@ int DatabaseManager::getDatabaseVersion()
     return v;
 }
 
-void DatabaseManager::upgradeDatabase(const int oldVersion, const int newVersion)
+bool DatabaseManager::upgradeDatabase(const int oldVersion)
 {
     //handle database version upgrades
+    int currentUpgradeVersion = oldVersion;
+    QSqlQuery query(getDatabase());
 
     //upgrade v1 -> v2
-    if ((oldVersion == 1) && (newVersion == 2)) {
+    if (currentUpgradeVersion == 1) {
         //no major change (only new field type URL and email)
+        currentUpgradeVersion = 2;
     }
-    //add new else if blocks on new versions here
+    //upgrade v2 -> v3
+    if (currentUpgradeVersion == 2) {
+        //file type has a new column for original import dir path
+        if (!query.exec("ALTER TABLE \"files\" ADD \"original_dir_path\" TEXT;")) {
+            QMessageBox::critical(nullptr, QObject::tr("Database Version Upgrade Failed"),
+                                  QObject::tr("Failed to execute %1. Error: %2")
+                                  .arg(query.lastQuery()).arg(query.lastError().text()));
+            return false;
+        }
+
+        //add collection order info
+        if (!query.exec("ALTER TABLE \"collections\" ADD \"c_order\" INTEGER;")) {
+            QMessageBox::critical(nullptr, QObject::tr("Database Version Upgrade Failed"),
+                                  QObject::tr("Failed to execute %1. Error: %2")
+                                  .arg(query.lastQuery()).arg(query.lastError().text()));
+            return false;
+        }
+
+        //get all collection IDs
+        QList<int> collectionIDs;
+        bool error = false;
+        error = !query.exec("SELECT \"_id\" FROM \"collections\"");
+        while (query.next()) {
+            collectionIDs.append(query.value(0).toInt());
+        }
+
+        //set order based on position in list
+        int currentOrder = 0;
+        foreach (int id, collectionIDs) {
+            currentOrder++;
+            query.prepare(QString("UPDATE \"collections\" "
+                                  "SET \"c_order\"=:newOrder WHERE \"_id\"=:collectionID"));
+            query.bindValue(":newOrder", currentOrder);
+            query.bindValue(":collectionID", id);
+            error |= (!query.exec());
+        }
+
+        if (error)  {
+            QMessageBox::critical(nullptr, QObject::tr("Database Version Upgrade Failed"),
+                                  QObject::tr("Failed to execute %1. Error: %2")
+                                  .arg(query.lastQuery()).arg(query.lastError().text()));
+            return false;
+        }
+        currentUpgradeVersion = 3;
+    }
+    //add new blocks on new versions here
 
     //upgrade done
     //so upgrade version info
-    QSqlQuery query(getDatabase());
-
     query.prepare("UPDATE symphytum_info SET value=:version WHERE key='db_version'");
     query.bindValue(":version", DefinitionHolder::DATABASE_VERSION);
-    query.exec();
+    return query.exec();
 }

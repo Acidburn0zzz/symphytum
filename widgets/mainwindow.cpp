@@ -30,6 +30,7 @@
 #include "importdialog.h"
 #include "alarmlistdialog.h"
 #include "aboutdialog.h"
+#include "upgradesuccessdialog.h"
 #include "../components/updatemanager.h"
 #include "../components/alarmmanager.h"
 #include "../utils/collectionfieldcleaner.h"
@@ -58,9 +59,9 @@
 //-----------------------------------------------------------------------------
 
 MainWindow::ViewMode MainWindow::m_currentViewMode = MainWindow::FormViewMode;
-QAbstractItemModel* MainWindow::m_currentModel = 0;
-QStatusBar* MainWindow::m_statusBar = 0;
-QUndoStack* MainWindow::m_undoStack = 0;
+QAbstractItemModel* MainWindow::m_currentModel = nullptr;
+QStatusBar* MainWindow::m_statusBar = nullptr;
+QUndoStack* MainWindow::m_undoStack = nullptr;
 
 
 //-----------------------------------------------------------------------------
@@ -69,9 +70,9 @@ QUndoStack* MainWindow::m_undoStack = 0;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
-      m_addFieldDialog(0),
-      m_updateManager(0),
-      m_alarmListDialog(0),
+      m_addFieldDialog(nullptr),
+      m_updateManager(nullptr),
+      m_alarmListDialog(nullptr),
       m_lastUsedCollectionId(0)
 {
     //init GUI elements
@@ -95,6 +96,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     setWindowTitle(tr("%1").arg(DefinitionHolder::NAME));
     setMinimumHeight(500);
+
+    checkDonationSuggestion();
 }
 
 MainWindow::~MainWindow()
@@ -178,6 +181,18 @@ void MainWindow::aboutQtActionTriggered()
     qApp->aboutQt();
 }
 
+void MainWindow::onlineDocActionTriggered()
+{
+    QUrl helpUrl(DefinitionHolder::HELP_URL);
+    QDesktopServices::openUrl(helpUrl);
+}
+
+void MainWindow::donateActionTriggered()
+{
+    QUrl url(DefinitionHolder::DONATE_URL);
+    QDesktopServices::openUrl(url);
+}
+
 void MainWindow::preferenceActionTriggered()
 {
     PreferencesDialog dialog(this);
@@ -189,17 +204,6 @@ void MainWindow::preferenceActionTriggered()
             m_formView->reloadAppearanceSettings();
         if (m_tableView)
             m_tableView->reloadRowSize();
-#ifdef Q_OS_LINUX
-        //update toolbar style
-        if (m_settingsManager->restoreProperty("linuxDarkAmbianceToolbar", "mainWindow").toBool())
-            m_toolBar->setStyleSheet("QToolBar {background-color: qlineargradient(spread:pad,"
-                                     " x1:0.5, y1:0.01, x2:0.5, y2:0.99, stop:0 rgba(65, 64, "
-                                     "59, 255), stop:0.01 rgba(56, 55, 52, 255), stop:0.99 "
-                                     "rgba(84, 82, 74, 255), stop:1 rgba(66, 65, 60, 255));} "
-                                     "QToolBar:!active {background-color: rgb(60, 59, 55);}");
-        else
-            m_toolBar->setStyleSheet("");
-#endif //Q_OS_LINUX
     }
     if (dialog.cloudSyncChanged()) {
         if (m_settingsManager->isCloudSyncActive()) {
@@ -407,8 +411,7 @@ void MainWindow::currentCollectionIdChanged(int collectionId)
         }
     }
 
-    detachModelFromViews();
-    attachModelToViews(collectionId);
+    reattachModelToViews(collectionId);
 
     //restore last active record id (row) if previously saved
     if (m_formView && m_currentModel) {
@@ -436,8 +439,7 @@ void MainWindow::currentCollectionChanged()
         currentFilter = sModel->filter();
     }
 
-    detachModelFromViews();
-    attachModelToViews(m_metadataEngine->getCurrentCollectionId());
+    reattachModelToViews(m_metadataEngine->getCurrentCollectionId());
 
     //restore search filter, in order to restore correct record and index
     if (sModel && (!currentFilter.isEmpty())) {
@@ -484,6 +486,7 @@ void MainWindow::newRecordActionTriggered()
             m_formView->setEnabled(true);
 
         sModel->addRecord(); //add e new empty record
+        int realRowCount = sModel->realRowCount();
 
         //set local data changed
         SyncSession::LOCAL_DATA_CHANGED = true;
@@ -498,11 +501,11 @@ void MainWindow::newRecordActionTriggered()
         //views should atomatically update but don't
         //needs investigation
         //update views (hard way)
-        attachModelToViews(m_metadataEngine->getCurrentCollectionId());
+        reattachModelToViews(m_metadataEngine->getCurrentCollectionId());
 
         //select newly created record
         m_formView->selectionModel()->setCurrentIndex(
-                    m_currentModel->index(sModel->realRowCount() - 1, 1),
+                    m_currentModel->index(realRowCount - 1, 1),
                     QItemSelectionModel::SelectCurrent);
     }
 }
@@ -539,16 +542,17 @@ void MainWindow::duplicateRecordActionTriggered()
             m_undoStack->push(cmd);
 
             sModel->duplicateRecord(row); //add duplicated record of row
+            int realRowCount = sModel->realRowCount();
             statusBar()->showMessage(tr("Record %1 duplicated").arg(row+1));
 
             //FIXME: temporary workaround for Qt5
             //views should atomatically update but don't
             //needs investigation
             //update views (hard way)
-            attachModelToViews(m_metadataEngine->getCurrentCollectionId());
+            reattachModelToViews(m_metadataEngine->getCurrentCollectionId());
 
             m_formView->selectionModel()->setCurrentIndex(
-                        m_currentModel->index(sModel->realRowCount() - 1, 1),
+                        m_currentModel->index(realRowCount - 1, 1),
                         QItemSelectionModel::SelectCurrent);
         }
     } else { //table view
@@ -623,14 +627,15 @@ void MainWindow::duplicateRecordActionTriggered()
             m_undoStack->clear();
         }
 
+        int realRowCount = sModel->realRowCount(); //call before reattach because Smodel gets deleted
         //update views (hard way)
-        attachModelToViews(m_metadataEngine->getCurrentCollectionId());
+        reattachModelToViews(m_metadataEngine->getCurrentCollectionId());
 
         statusBar()->showMessage(tr("%1 record(s) duplicated").arg(progress));
 
         //select first duplicate
         m_formView->selectionModel()->setCurrentIndex(
-                    m_currentModel->index(sModel->realRowCount() - rows.size(), 1),
+                    m_currentModel->index(realRowCount - rows.size(), 1),
                     QItemSelectionModel::SelectCurrent);
     }
 
@@ -679,7 +684,8 @@ void MainWindow::deleteRecordActionTriggered()
             //views should atomatically update but don't
             //needs investigation
             //update views (hard way)
-            attachModelToViews(m_metadataEngine->getCurrentCollectionId());
+            //reattachModelToViews(); //no longer needed because StandardModel::rowsDeleted
+                                      //gets connected in attachModelToViews
 
             statusBar()->showMessage(tr("Record %1 deleted").arg(index.row()+1));
         }
@@ -777,7 +783,7 @@ void MainWindow::deleteRecordActionTriggered()
         }
 
         //update views (hard way)
-        attachModelToViews(m_metadataEngine->getCurrentCollectionId());
+        reattachModelToViews(m_metadataEngine->getCurrentCollectionId());
 
         //status message
         statusBar()->showMessage(tr("%1 record(s) deleted").arg(progress));
@@ -864,7 +870,7 @@ void MainWindow::deleteAllRecordsActionTriggered()
     m_metadataEngine->deleteAllRecords(id);
 
     //update views (hard way)
-    attachModelToViews(m_metadataEngine->getCurrentCollectionId());
+    reattachModelToViews(m_metadataEngine->getCurrentCollectionId());
 
     //set local data changed
     SyncSession::LOCAL_DATA_CHANGED = true;
@@ -1375,6 +1381,11 @@ void MainWindow::importActionTriggered()
     this->activateWindow();
 }
 
+void MainWindow::lockFormViewActionToggled(const bool locked)
+{
+    m_formView->setLockFormLayout(locked);
+}
+
 void MainWindow::showAlarmListDialog()
 {
     if (!m_alarmListDialog) {
@@ -1543,23 +1554,27 @@ void MainWindow::syncStatusChanged()
 
 void MainWindow::checkForUpdatesSlot()
 {
-    if (DefinitionHolder::APP_STORE ||
-            (!m_settingsManager->restoreCheckUpdates()))
-        return;
-
-    if (!m_updateManager) {
-        m_updateManager = new UpdateManager(this);
-        connect(m_updateManager, SIGNAL(noUpdateSignal()),
-                this, SLOT(noUpdateFoundSlot()));
-        connect(m_updateManager, SIGNAL(updateErrorSignal()),
-                this, SLOT(updateErrorSlot()));
-        connect(m_updateManager, SIGNAL(updatesAccepted()),
-                this, SLOT(close()));
+    //check if current version has been just updated and inform user if so
+    if (m_settingsManager->restoreSoftwareBuild() < DefinitionHolder::SOFTWARE_BUILD) {
+        UpgradeSuccessDialog *ud = new UpgradeSuccessDialog(this);
+        ud->show();
     }
 
-    //start async update check
-    statusBar()->showMessage(tr("Checking for updates..."));
-    m_updateManager->checkForUpdates();
+    if (!(DefinitionHolder::APP_STORE || (!m_settingsManager->restoreCheckUpdates()))) {
+        if (!m_updateManager) {
+            m_updateManager = new UpdateManager(this);
+            connect(m_updateManager, SIGNAL(noUpdateSignal()),
+                    this, SLOT(noUpdateFoundSlot()));
+            connect(m_updateManager, SIGNAL(updateErrorSignal()),
+                    this, SLOT(updateErrorSlot()));
+            connect(m_updateManager, SIGNAL(updatesAccepted()),
+                    this, SLOT(close()));
+        }
+
+        //start async update check
+        statusBar()->showMessage(tr("Checking for updates..."));
+        m_updateManager->checkForUpdates();
+    }
 }
 
 void MainWindow::noUpdateFoundSlot()
@@ -1570,6 +1585,12 @@ void MainWindow::noUpdateFoundSlot()
 void MainWindow::updateErrorSlot()
 {
     statusBar()->showMessage(tr("Error while checking for software updates"));
+}
+
+void MainWindow::reattachModelToViewsSlot()
+{
+    //reattach model with current collection id
+    reattachModelToViews(m_metadataEngine->getCurrentCollectionId());
 }
 
 
@@ -1589,6 +1610,12 @@ void MainWindow::createActions()
 
     m_aboutQtAction = new QAction(tr("About Qt"), this);
     m_aboutQtAction->setMenuRole(QAction::AboutQtRole);
+
+    m_onlineDocAction = new QAction(tr("Online documentation"), this);
+    m_onlineDocAction->setStatusTip(tr("View the project wiki on GitHub"));
+
+    m_donateAction = new QAction(tr("Donate!"), this);
+    m_donateAction->setStatusTip(tr("Say thanks by donating any amount"));
 
     m_newCollectionAction = new QAction(tr("New Collection..."), this);
     m_newCollectionAction->setIcon(QIcon(":/images/icons/newcollection.png"));
@@ -1698,6 +1725,13 @@ void MainWindow::createActions()
 
     m_exportAction = new QAction(tr("Export..."), this);
     m_exportAction->setStatusTip(tr("Export all or only selected records"));
+
+    m_lockFormViewAction = new QAction(tr("Lock form view"), this);
+    m_lockFormViewAction->setCheckable(true);
+    m_lockFormViewAction->setShortcut(QString("CTRL+L"));
+    m_lockFormViewAction->setIcon(QIcon(":/images/icons/locked.png"));
+    m_lockFormViewAction->setStatusTip(tr("Lock the form view design to prevent "
+                                          "unwanted field movements"));
 }
 
 void MainWindow::createToolBar()
@@ -1713,6 +1747,8 @@ void MainWindow::createToolBar()
     m_toolBar->addAction(m_newCollectionAction);
     m_toolBar->addAction(m_duplicateCollectionAction);
     m_toolBar->addAction(m_deleteCollectionAction);
+    m_toolBar->addSeparator();
+    m_toolBar->addAction(m_lockFormViewAction);
     m_toolBar->addSeparator();
     m_toolBar->addAction(m_syncAction);
 
@@ -1786,6 +1822,8 @@ void MainWindow::createMenu()
     m_editMenu->addSeparator();
     m_editMenu->addAction(m_selectAllAction);
     m_editMenu->addSeparator();
+    m_editMenu->addAction(m_lockFormViewAction);
+    m_editMenu->addSeparator();
     m_editMenu->addAction(m_findAction);
 
     m_viewMenu = menuBar()->addMenu(tr("&View"));
@@ -1824,6 +1862,9 @@ void MainWindow::createMenu()
     m_helpMenu = menuBar()->addMenu(tr("&Help"));
     m_helpMenu->addAction(m_aboutAction);
     m_helpMenu->addAction(m_aboutQtAction);
+    m_helpMenu->addSeparator();
+    m_helpMenu->addAction(m_onlineDocAction);
+    m_helpMenu->addAction(m_donateAction);
     m_helpMenu->addSeparator();
     if (!DefinitionHolder::APP_STORE)
         m_helpMenu->addAction(m_checkUpdatesAction);
@@ -1881,6 +1922,10 @@ void MainWindow::createConnections()
             this, SLOT(aboutActionTriggered()));
     connect(m_aboutQtAction, SIGNAL(triggered()),
             this, SLOT(aboutQtActionTriggered()));
+    connect(m_onlineDocAction, &QAction::triggered,
+            this, &MainWindow::onlineDocActionTriggered);
+    connect(m_donateAction, &QAction::triggered,
+            this, &MainWindow::donateActionTriggered);
     connect(m_settingsAction, SIGNAL(triggered()),
             this, SLOT(preferenceActionTriggered()));
     connect(m_findAction, SIGNAL(triggered()),
@@ -1909,6 +1954,8 @@ void MainWindow::createConnections()
             this, SLOT(exportActionTriggered()));
     connect(m_importAction, SIGNAL(triggered()),
             this, SLOT(importActionTriggered()));
+    connect(m_lockFormViewAction, &QAction::toggled,
+            this, &MainWindow::lockFormViewActionToggled);
 
     //record actions
     connect(m_newRecordAction, SIGNAL(triggered()),
@@ -2015,7 +2062,7 @@ void MainWindow::restoreSettings()
     restoreState(m_settingsManager->restoreState("mainWindow"));
 
     //restore view mode
-    m_currentViewMode = (ViewMode) m_settingsManager->restoreViewMode();
+    m_currentViewMode = static_cast<ViewMode>(m_settingsManager->restoreViewMode());
     if(m_currentViewMode == TableViewMode)
         tableViewModeTriggered();
 
@@ -2055,6 +2102,11 @@ void MainWindow::restoreSettings()
         m_toggleDockAction->setChecked(true);
     }
 
+    //restore layout locked status of formView
+    bool fwLock = m_settingsManager->restoreProperty("lockFormView", "mainWindow").toBool();
+    m_lockFormViewAction->setChecked(fwLock);
+    m_formView->setLockFormLayout(fwLock);
+
     //sync
     SyncSession::LOCAL_DATA_CHANGED = m_syncEngine->localDataChanged();
     SyncSession::IS_ENABLED = m_settingsManager->isCloudSyncActive();
@@ -2067,6 +2119,10 @@ void MainWindow::saveSettings()
     m_settingsManager->saveSoftwareBuild();
     m_settingsManager->saveViewMode(m_currentViewMode);
     m_settingsManager->saveLastUsedRecord(m_formView->getCurrentRow());
+
+    //save layout locked status of formView
+    m_settingsManager->saveProperty("lockFormView", "mainWindow",
+                                    m_lockFormViewAction->isChecked());
 
     //sync
     if (SyncSession::IS_ENABLED) {
@@ -2087,8 +2143,8 @@ void MainWindow::init()
 void MainWindow::attachModelToViews(const int collectionId)
 {
     if (!collectionId) { //0 stands for invalid
-        m_formView->setModel(0);
-        m_tableView->setModel(0);
+        m_formView->setModel(nullptr);
+        m_tableView->setModel(nullptr);
         return;
     }
 
@@ -2104,6 +2160,11 @@ void MainWindow::attachModelToViews(const int collectionId)
     //fetch all data from model (avoid lazy loading at startup)
     while(m_currentModel->canFetchMore(QModelIndex()))
         m_currentModel->fetchMore(QModelIndex());
+
+    //create connections
+    StandardModel *sModel = qobject_cast<StandardModel*>(m_currentModel);
+    connect(sModel, &StandardModel::rowsDeleted, //needed to detect undo of record deletions
+            this, &MainWindow::reattachModelToViewsSlot);
 
     //set model on views
     m_formView->setModel(m_currentModel);
@@ -2128,12 +2189,20 @@ void MainWindow::detachModelFromViews()
     setFocus();
 
     //content data views
-    m_formView->setModel(0);
-    m_tableView->setModel(0);
+    m_formView->setModel(nullptr);
+    m_tableView->setModel(nullptr);
     if (m_currentModel) {
+        //connected signals are deleted too with the object
         delete m_currentModel;
-        m_currentModel = 0;
+        m_currentModel = nullptr;
     }
+}
+
+void MainWindow::reattachModelToViews(const int collectionId)
+{
+    //detach and attach models to views to reload the model and views (hard way)
+    detachModelFromViews();
+    attachModelToViews(collectionId);
 }
 
 void MainWindow::attachCollectionModelView()
@@ -2222,8 +2291,8 @@ void MainWindow::createSyncConnections()
 void MainWindow::removeSyncConnections()
 {
     //sync engine
-    disconnect(m_syncEngine, 0, m_dockWidget, 0);
-    disconnect(m_syncEngine, 0, this, 0);
+    disconnect(m_syncEngine, nullptr, m_dockWidget, nullptr);
+    disconnect(m_syncEngine, nullptr, this, nullptr);
 }
 
 void MainWindow::checkAlarmTriggers()
@@ -2232,5 +2301,30 @@ void MainWindow::checkAlarmTriggers()
     if (alarmManager.checkAlarms()) {
         //this is a workaround to activate focus on the dialog
         QTimer::singleShot(100, this, SLOT(showAlarmListDialog()));
+    }
+}
+
+void MainWindow::checkDonationSuggestion()
+{
+    bool skipDonate = m_settingsManager->restoreProperty("skipDonate", "mainWindow").toBool();
+    if (!skipDonate) {
+        QDate lastUsageDate = m_settingsManager->restoreProperty("lastUsageDate", "mainWindow").toDate();
+        int daysUsed = m_settingsManager->restoreProperty("donationDaysCount", "mainWindow").toInt();
+        if (daysUsed >= 30) {
+            int r = QMessageBox::question(this, tr("Support %1").arg(DefinitionHolder::NAME),
+                                          tr("Dear user, you have been using %1 for a while. If you enjoy using this software, "
+                                             "please consider supporting our development effort by making a small donation, thanks!<br />"
+                                             "Would you like to donate now?").arg(DefinitionHolder::NAME),
+                                          QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            if (r == QMessageBox::Yes) {
+                donateActionTriggered();
+            }
+            m_settingsManager->saveProperty("skipDonate", "mainWindow", true);
+        }
+        else if (lastUsageDate != QDate::currentDate()) {
+            daysUsed++;
+            m_settingsManager->saveProperty("donationDaysCount", "mainWindow", daysUsed);
+            m_settingsManager->saveProperty("lastUsageDate", "mainWindow", QDate::currentDate());
+        }
     }
 }

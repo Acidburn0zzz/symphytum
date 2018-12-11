@@ -281,9 +281,11 @@ public:
      * only a reference is saved here.
      * @param fileName - the external file name as defined by the user
      * @param hashName - the name given by the FileManager to store the file
-     * @param int - the id of the newly added file
+     * @param originalDirPath - the original directory path from which the files was imported
+     * @return int - the id of the newly added file
      */
-    int addContentFile(const QString &fileName, const QString &hashName);
+    int addContentFile(const QString &fileName, const QString &hashName,
+                       const QString &originalDirPath);
 
     /** Remove file metadata for the specified file */
     void removeContentFile(int fileId);
@@ -301,6 +303,7 @@ public:
      * @param fileName - new file name
      * @param hashName - optionally, new hash name for the FileManager storage
      * @param dateAdded - optionally, new date for file add
+     * NOTE: origDirPath, the original file import directory path, cannot be changed
      */
     void updateContentFile(int fileId, const QString &fileName,
                            const QString &hashName = QString(),
@@ -312,12 +315,14 @@ public:
      * @param fileName - reference where the file name is saved
      * @param hashName - reference where hash name is saved
      * @param dateAdded - reference where added date is saved
+     * @param origDirPath - original directory path from which a file was imported
      * @return bool - whether the specified content file exists or not
      */
 
     bool getContentFile(int fileId, QString &fileName,
                         QString &hashName,
-                        QDateTime &dateAdded);
+                        QDateTime &dateAdded,
+                        QString &origDirPath);
 
     /**
      * Get a map of all content files
@@ -346,6 +351,44 @@ public:
      */
     void setDirtyCurrentColleectionId();
 
+    /**
+     * @brief Get the collection order (c_order) which is used in CollectionListView
+     * for ordering
+     * @param collectionId - the id for which the position is requested
+     * @return the order int, 1 is smallest value and means top of list
+     */
+    int getCollectionOrder(const int collectionId);
+
+    /**
+     * @brief Move the specified collection up in the order list
+     * by updating also all other collections, only 1 step up at a time allowed
+     * @param collectionId
+     * @param currentOrder - the current order in the collection list,
+     * this is the old order, the new order will be currentOrder-1
+     * @return int - newOrder in collection list (oldOrder - 1)
+     */
+    int moveCollectionListOrderOneStepUp(const int collectionId,
+                                         const int currentOrder);
+
+    /**
+     * @brief Move the specified collection down in the order list
+     * by updating also all other collections, only 1 step down at a time allowed
+     * @param collectionId
+     * @param currentOrder - the current order in the collection list,
+     * this is the old order, the new order will be currentOrder+1
+     * @return int - newOrder in collection list (oldOrder + 1)
+     */
+    int moveCollectionListOrderOneStepDown(const int collectionId,
+                                           const int currentOrder);
+
+    /** Get the current maximum collection order int */
+    int getMaxCollectionOrderCount();
+
+    /** Get the maximum collection order position int currently in use + 1
+     *  to be used for a new collection that needs an initial order position
+     */
+    int getNewCollectionOrderCount();
+
 signals:
     /**
      * This signal is emitted whenever the currently active collection
@@ -358,8 +401,8 @@ signals:
     void currentCollectionChanged();
 
 private:
-    MetadataEngine(QObject *parent = 0);
-    MetadataEngine(const MetadataEngine&) : QObject(0) {}
+    MetadataEngine(QObject *parent = nullptr);
+    MetadataEngine(const MetadataEngine&) : QObject(nullptr) {}
     ~MetadataEngine();
 
     /**

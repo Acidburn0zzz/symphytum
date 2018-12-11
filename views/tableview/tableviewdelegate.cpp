@@ -41,7 +41,7 @@
 //-----------------------------------------------------------------------------
 
 TableViewDelegate::TableViewDelegate(QObject *parent) :
-    QStyledItemDelegate(parent), m_metadataEngine(0)
+    QStyledItemDelegate(parent), m_metadataEngine(nullptr)
 {
     m_metadataEngine = &MetadataEngine::getInstance();
 
@@ -208,6 +208,7 @@ QWidget* TableViewDelegate::createEditor(QWidget *parent, const QStyleOptionView
     case MetadataEngine::DateType:
     {
         QDateTimeEdit *t = new QDateTimeEdit(parent);
+        t->setMinimumDate(QDate(100, 1, 1));
 
         //load date format from display properties
         QLocale locale;
@@ -800,13 +801,15 @@ void TableViewDelegate::paintImageType(QPainter *painter,
     QString filePath;
     QString fileName;
     QString fileHash;
+    QString origDirPath;
     QDateTime addedDateTime;
     FileManager fm;
 
     m_metadataEngine->getContentFile(fileId,
                                      fileName,
                                      fileHash,
-                                     addedDateTime);
+                                     addedDateTime,
+                                     origDirPath);
 
     //if file was not found
     if (fileHash.isEmpty()) return;
